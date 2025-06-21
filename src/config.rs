@@ -6,6 +6,6 @@ pub struct DwellingConfig {
     pub app_port: u16,
 }
 
-pub fn load_config() -> DwellingConfig {
+pub fn load() -> DwellingConfig {
     DwellingConfig::init_from_env().unwrap()
 }

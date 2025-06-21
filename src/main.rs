@@ -1,16 +1,19 @@
 mod config;
+mod hello;
+mod observability;
 
 use axum::Router;
-use axum::extract::{Query, State};
-use axum::response::Html;
+use axum::extract::MatchedPath;
+use axum::http::{Request, StatusCode};
 use axum::routing::get;
 use handlebars::Handlebars;
-use serde::ser::SerializeStruct;
-use serde::{Deserialize, Serialize, Serializer};
 use std::net::Ipv4Addr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tower_http::services::{ServeDir, ServeFile};
+use tower_http::set_status::SetStatus;
+use tower_http::trace::TraceLayer;
+use tracing::{info, trace_span};
 
 pub struct CommonState {
     templater: Handlebars<'static>,
@@ -24,26 +27,52 @@ impl CommonState {
 
 #[tokio::main]
 async fn main() {
-    let config = config::load_config();
+    observability::init();
+
+    let config = config::load();
 
     let state = Arc::new(CommonState {
         templater: init_templating(),
     });
 
-    let not_found_handler = ServeFile::new("./templates/not_found.html");
+    let not_found_handler = SetStatus::new(
+        ServeFile::new("./templates/not_found.html"),
+        StatusCode::NOT_FOUND,
+    );
+
     let app = Router::new()
         .route("/", get(|| async { "Stub" }))
-        .route("/hello", get(render_hello))
+        .route("/hello", get(hello::render_hello))
         .nest_service(
             "/assets",
             ServeDir::new("assets").fallback(not_found_handler.clone()),
         )
         .with_state(state)
-        .fallback_service(not_found_handler);
+        .fallback_service(not_found_handler)
+        .layer(
+            TraceLayer::new_for_http().make_span_with(|request: &Request<_>| {
+                let matched_path = request
+                    .extensions()
+                    .get::<MatchedPath>()
+                    .map(MatchedPath::as_str);
+
+                trace_span!(
+                    "http_request",
+                    method = ?request.method(),
+                    matched_path,
+                )
+            }),
+        );
 
     let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, config.app_port))
         .await
         .unwrap();
+
+    info!(
+        "Starting Dwelling on address: {}",
+        listener.local_addr().unwrap()
+    );
+
     axum::serve(listener, app).await.unwrap();
 }
 
@@ -57,33 +86,4 @@ fn init_templating() -> Handlebars<'static> {
         .unwrap();
 
     templater
-}
-
-#[derive(Deserialize)]
-struct HelloStruct {
-    name: Option<String>,
-}
-
-impl Serialize for HelloStruct {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut builder = serializer.serialize_struct("HelloStruct", 1)?;
-
-        let name = match self.name {
-            Some(ref n) => n,
-            None => "World",
-        };
-        builder.serialize_field("name", name)?;
-
-        builder.end()
-    }
-}
-
-async fn render_hello(
-    Query(hello): Query<HelloStruct>,
-    State(state): State<Arc<CommonState>>,
-) -> Html<String> {
-    Html::from(state.get_templater().render("index", &hello).unwrap())
 }
