@@ -1,3 +1,5 @@
+mod config;
+
 use axum::Router;
 use axum::extract::{Query, State};
 use axum::response::Html;
@@ -22,6 +24,8 @@ impl CommonState {
 
 #[tokio::main]
 async fn main() {
+    let config = config::load_config();
+
     let state = Arc::new(CommonState {
         templater: init_templating(),
     });
@@ -37,7 +41,7 @@ async fn main() {
         .with_state(state)
         .fallback_service(not_found_handler);
 
-    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 8080))
+    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, config.app_port))
         .await
         .unwrap();
     axum::serve(listener, app).await.unwrap();
