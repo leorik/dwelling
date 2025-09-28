@@ -1,5 +1,6 @@
 mod config;
 mod hello;
+mod model;
 mod observability;
 
 use axum::Router;

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-tokio = { version = "1.45", features = ["full"] }
+tokio = { version = "1.47", features = ["full"] }
 axum = { version = "0.8" }
 tower-http = { version = "0.6", features = ["fs", "trace"] }
 handlebars = "6.3"
@@ -17,3 +17,5 @@ opentelemetry-otlp = { version = "0.30", features = ["grpc-tonic", "tls"] }
 opentelemetry_sdk = "0.30"
 opentelemetry = "0.30"
 thiserror = "2.0"
+uuid = {  version = "1.18", features = ["v7", "serde"] }
+chrono = { version =  "0.4", features = ["serde"] }
