@@ -38,7 +38,7 @@ pub struct Post {
     pub id: TypedId<Post>,
     pub author_id: TypedId<Account>,
     pub thread_id: TypedId<Thread>,
-    pub timestamp: DateTime<Utc>,
+    pub created: DateTime<Utc>,
     pub body: Arc<String>,
 }
 

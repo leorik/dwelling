@@ -8,6 +8,8 @@ services:
       - '4317:4317'
     environment:
       COLLECTOR_OTLP_ENABLED: true
+    networks:
+      - inner
 
   postgres:
     image: postgres:17
@@ -17,3 +19,8 @@ services:
       POSTGRES_USER: 'dwelling'
       POSTGRES_PASSWORD: 'P@ssw0rdP@ssw0rd'
       POSTGRES_DB: 'dwelling'
+    networks:
+      - inner
+
+networks:
+  inner:
