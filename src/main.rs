@@ -3,7 +3,9 @@ mod database;
 mod hello;
 mod model;
 mod observability;
+mod thread;
 
+use std::error::Error;
 use axum::Router;
 use axum::extract::MatchedPath;
 use axum::http::{Request, StatusCode};
@@ -12,6 +14,9 @@ use handlebars::Handlebars;
 use sqlx::{Pool, Postgres};
 use std::net::Ipv4Addr;
 use std::sync::Arc;
+use axum::response::Html;
+use serde::{Deserialize, Serialize};
+use thiserror::__private::AsDisplay;
 use tokio::net::TcpListener;
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::set_status::SetStatus;
@@ -59,6 +64,7 @@ async fn main() {
     let app = Router::new()
         .route("/", get(|| async { "Stub" }))
         .route("/hello", get(hello::render_hello))
+        .nest("/thread", thread::build_router())
         .nest_service(
             "/assets",
             ServeDir::new("assets").fallback(not_found_handler.clone()),
@@ -102,4 +108,14 @@ fn init_templating() -> Handlebars<'static> {
         .unwrap();
 
     templater
+}
+
+#[derive(Serialize)]
+struct ErrorDisplay {
+    name: String
+}
+pub fn render_error(templater: &Handlebars<'static>, error: &dyn Error) -> Html<String> {
+    let display = ErrorDisplay { name: error.to_string() };
+    let rendered = templater.render("error", &display).unwrap_or_else(|e| format!("Encountered error while rendering error: {e}"));
+    Html::from(rendered)
 }
