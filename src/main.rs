@@ -1,4 +1,5 @@
 mod config;
+mod database;
 mod hello;
 mod model;
 mod observability;
@@ -8,6 +9,7 @@ use axum::extract::MatchedPath;
 use axum::http::{Request, StatusCode};
 use axum::routing::get;
 use handlebars::Handlebars;
+use sqlx::{Pool, Postgres};
 use std::net::Ipv4Addr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -18,11 +20,16 @@ use tracing::{info, trace_span};
 
 pub struct CommonState {
     templater: Handlebars<'static>,
+    connection_pool: Pool<Postgres>,
 }
 
 impl CommonState {
     pub fn get_templater(&self) -> &Handlebars<'static> {
         &self.templater
+    }
+
+    pub fn get_db_connection_pool(&self) -> &Pool<Postgres> {
+        &self.connection_pool
     }
 }
 
@@ -32,8 +39,16 @@ async fn main() {
 
     let config = config::load();
 
+    let connection_pool = match database::init_database(&config).await {
+        Ok(pool) => pool,
+        Err(err) => {
+            panic!("{err}")
+        }
+    };
+
     let state = Arc::new(CommonState {
         templater: init_templating(),
+        connection_pool,
     });
 
     let not_found_handler = SetStatus::new(

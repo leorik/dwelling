@@ -1,28 +1,34 @@
+use chrono::{DateTime, Utc};
 use std::marker::PhantomData;
 use std::sync::Arc;
-use chrono::{DateTime, Utc};
-use uuid::{Timestamp, Uuid};
+use uuid::Uuid;
 
 #[repr(transparent)]
 #[derive(Debug, Copy, Clone)]
 pub struct TypedId<T> {
     _type_holder: PhantomData<T>,
-    id: Uuid
+    id: Uuid,
 }
 
-impl <T> TypedId<T> {
-    pub fn new(ts: Timestamp) -> Self {
-        TypedId { id: Uuid::new_v7(ts), _type_holder: PhantomData }
+impl<T> TypedId<T> {
+    pub fn new() -> Self {
+        TypedId {
+            id: Uuid::now_v7(),
+            _type_holder: PhantomData,
+        }
     }
 }
 
-impl <T> From<Uuid> for TypedId<T> {
+impl<T> From<Uuid> for TypedId<T> {
     fn from(value: Uuid) -> Self {
-        TypedId { id: value, _type_holder: PhantomData }
+        TypedId {
+            id: value,
+            _type_holder: PhantomData,
+        }
     }
 }
 
-impl <T> AsRef<Uuid> for TypedId<T> {
+impl<T> AsRef<Uuid> for TypedId<T> {
     fn as_ref(&self) -> &Uuid {
         &self.id
     }
@@ -39,10 +45,10 @@ pub struct Post {
 pub struct Thread {
     pub id: TypedId<Thread>,
     pub title: String,
-    pub hru: String
+    pub hru: String,
 }
 
 pub struct Account {
     pub id: TypedId<Account>,
-    pub name: String
+    pub name: String,
 }
